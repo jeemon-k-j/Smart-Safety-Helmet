@@ -1,85 +1,57 @@
 import 'package:flutter/material.dart';
 
-import 'config/app_config.dart';
-import 'repositories/accident_repository.dart';
-import 'repositories/device_repository.dart';
-import 'repositories/emergency_contact_repository.dart';
+import 'app_dependencies.dart';
 import 'screens/auth/login_screen.dart';
-import 'screens/dashboard/dashboard_screen.dart';
-import 'services/accident/accident_alert_controller.dart';
-import 'services/accident/accident_event_gate.dart';
-import 'services/accident/pending_notification_store.dart';
-import 'services/auth/auth_service.dart';
-import 'services/location/geolocator_location_service.dart';
-import 'services/location/phone_location_resolver.dart';
-import 'services/notifications/email_bridge_notification_service.dart';
+import 'screens/home/home_shell.dart';
 import 'theme/app_theme.dart';
 
 class SmartSafetyHelmetApp extends StatefulWidget {
-  const SmartSafetyHelmetApp({
-    super.key,
-    required this.pendingStore,
-    this.deviceId = AppConfig.defaultDeviceId,
-  });
+  const SmartSafetyHelmetApp({super.key, required this.dependencies});
 
-  final PendingNotificationStore pendingStore;
-  final String deviceId;
+  final AppDependencies dependencies;
 
   @override
   State<SmartSafetyHelmetApp> createState() => _SmartSafetyHelmetAppState();
 }
 
 class _SmartSafetyHelmetAppState extends State<SmartSafetyHelmetApp> {
-  late final AuthService _auth = AuthService();
-  late final DeviceRepository _deviceRepository =
-      DeviceRepository(deviceId: widget.deviceId);
-  late final AccidentRepository _accidentRepository =
-      AccidentRepository(deviceId: widget.deviceId);
-  late final EmergencyContactRepository _contactRepository =
-      EmergencyContactRepository();
-  late final AccidentAlertController _alertController = AccidentAlertController(
-    accidentRepository: _accidentRepository,
-    contactRepository: _contactRepository,
-    locationResolver: PhoneLocationResolver(
-      locationService: GeolocatorLocationService(),
-    ),
-    notifications: EmailBridgeNotificationService(
-      bridgeBaseUrl: AppConfig.emailBridgeUrl,
-    ),
-    gate: AccidentEventGate(),
-    pendingStore: widget.pendingStore,
-  );
-
   @override
   void dispose() {
-    _alertController.dispose();
+    widget.dependencies.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final deps = widget.dependencies;
     return MaterialApp(
       title: 'Smart Safety Helmet',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: StreamBuilder(
-        stream: _auth.authStateChanges(),
+        stream: deps.authService.authStateChanges(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData &&
+              deps.authService.currentUser == null) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          final user = snapshot.data;
+          final user = snapshot.data ?? deps.authService.currentUser;
           if (user == null) {
-            return LoginScreen(authService: _auth);
+            return LoginScreen(
+              authService: deps.authService,
+              firebaseReady: deps.firebaseReady,
+            );
           }
-          return DashboardScreen(
-            authService: _auth,
-            deviceRepository: _deviceRepository,
-            accidentRepository: _accidentRepository,
-            contactRepository: _contactRepository,
-            alertController: _alertController,
+          return HomeShell(
+            authService: deps.authService,
+            deviceRepository: deps.deviceRepository,
+            accidentRepository: deps.accidentRepository,
+            contactRepository: deps.contactRepository,
+            alertController: deps.alertController,
+            firebaseReady: deps.firebaseReady,
           );
         },
       ),

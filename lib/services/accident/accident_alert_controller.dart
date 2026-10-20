@@ -273,8 +273,14 @@ class AccidentAlertController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _disposed = false;
+
   @override
   void dispose() {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     _ticker?.cancel();
     super.dispose();
   }

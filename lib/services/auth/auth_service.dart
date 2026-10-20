@@ -1,34 +1,14 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'auth_user.dart';
 
-/// Firebase Authentication (email/password) for contact data access.
-class AuthService {
-  AuthService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
+/// Authentication for emergency-contact and device data access.
+abstract class AuthService {
+  Stream<AuthUser?> authStateChanges();
 
-  final FirebaseAuth _auth;
+  AuthUser? get currentUser;
 
-  Stream<User?> authStateChanges() => _auth.authStateChanges();
+  Future<void> signIn({required String email, required String password});
 
-  User? get currentUser => _auth.currentUser;
+  Future<void> register({required String email, required String password});
 
-  Future<UserCredential> signIn({
-    required String email,
-    required String password,
-  }) {
-    return _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-  }
-
-  Future<UserCredential> register({
-    required String email,
-    required String password,
-  }) {
-    return _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-  }
-
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut();
 }

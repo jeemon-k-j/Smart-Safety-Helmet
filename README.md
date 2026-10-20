@@ -2,8 +2,8 @@
 
 Academic Flutter project for a motorcycle / vehicle **smart safety helmet** with
 ESP32 sensing, **Firebase Realtime Database** (not Cloud Firestore), Firebase
-Authentication, and smartphone GPS + emergency email (adapted from
-[DeepCrash / Car Crash Detection System](../Car_Crash_Detection_System)).
+Authentication, and smartphone GPS + emergency email (adapted from DeepCrash /
+`Car_Crash_Detection_System`).
 
 ## Features
 
@@ -20,20 +20,40 @@ Authentication, and smartphone GPS + emergency email (adapted from
 
 ```
 lib/
-  models/          Device, accident, contacts, notification, GPS types
-  repositories/    Firebase RTDB access
-  services/        Auth, location (DeepCrash-style), accident countdown, email bridge client
-  screens/         Login, dashboard, contacts, accident alert panel
-  theme/           Material 3 safety UI
-firmware/          ESP32 field contract reference sketch
-local-email-bridge/  SMTP bridge (DeepCrash approach)
-docs/              RTDB schema + hardware
+  models/           Device, accident, contacts, notification, GPS types
+  repositories/     Abstract + Firebase RTDB + local (credential-free) adapters
+  services/         Auth, location (DeepCrash-style), accident countdown, email bridge client
+  screens/          Login, Safety dashboard, Alerts (countdown + email recipients)
+  bootstrap.dart    Initializes Firebase only when dart-defines are present
+  app_dependencies.dart  Wires Firebase or local implementations
+firmware/           ESP32 field contract reference sketch
+local-email-bridge/ SMTP bridge (DeepCrash approach; secrets in .env only)
+docs/               RTDB schema, hardware, CREDENTIALS
 ```
+
+Bottom navigation has two requirement-derived destinations only: **Safety** and
+**Alerts**. Emergency email recipients live on Alerts (not a separate Contacts tab).
 
 Ignition allow/deny and LED/buzzer warnings are **ESP32-local** and must not
 depend on internet connectivity.
 
-## Setup
+Phone GPS uses the device location APIs (**no Google Maps API key** required for
+coordinates or a `maps.google.com` link).
+
+## Run without client credentials
+
+The app starts with local auth/contacts/status repositories when Firebase
+dart-defines are absent. There are **no** demo/simulator controls in the UI.
+
+```bash
+flutter pub get
+flutter run
+```
+
+See **`docs/CREDENTIALS.md`** for the short list of steps still blocked on
+client Firebase / SMTP credentials.
+
+## Setup (when credentials are approved)
 
 ### 1. Flutter
 
@@ -43,50 +63,40 @@ flutter analyze
 flutter test
 ```
 
-### 2. Firebase
+### 2. Firebase (client-provided project only)
 
-1. Create a Firebase project and enable **Authentication** (Email/Password) and
-   **Realtime Database**.
-2. Do **not** enable/use Cloud Firestore for this app.
-3. Run `flutterfire configure` (or paste keys into
-   `lib/config/firebase_options.dart` and `android/app/google-services.json`).
-4. Deploy rules: `firebase deploy --only database` (uses `database.rules.json`).
-5. Seed a device node such as `devices/helmet-001/status` (see `docs/RTDB_SCHEMA.md`).
-
-### 3. Dart defines (optional)
-
-Copy `dart_defines.example.json` → `dart_defines.json` (git-ignored):
+1. Use the **approved** Firebase project; enable Email/Password Auth and RTDB.
+2. Do **not** use Cloud Firestore for this app.
+3. Copy `dart_defines.example.json` → `dart_defines.json` and fill `FIREBASE_*`
+   (never commit real secrets). Optionally run `flutterfire configure` for
+   platform files.
+4. Deploy rules: `firebase deploy --only database`.
+5. Seed `devices/helmet-001/status` (see `docs/RTDB_SCHEMA.md`).
 
 ```bash
 flutter run --dart-define-from-file=dart_defines.json
 ```
 
-### 4. Emergency email bridge
-
-Adapted from DeepCrash. The app posts JSON to the bridge; SMTP credentials stay
-on the PC.
+### 3. Emergency email bridge
 
 ```bash
 cd local-email-bridge
-cp .env.example .env   # set TEST_EMAIL + SMTP_*
+cp .env.example .env   # set TEST_EMAIL + SMTP_* (pending client values)
 npm install
 npm start
 ```
 
-On a physical Android phone, set `EMAIL_BRIDGE_URL` to your PC LAN IP
-(e.g. `http://192.168.1.10:3000`).
-
-### 5. Hardware
+### 4. Hardware
 
 See `docs/HARDWARE.md` and `firmware/esp32_rtdb_contract.ino`.
 
 ## Verification status
 
-Automated: `flutter pub get`, `flutter analyze`, and unit tests in this repo.
+Automated: `flutter pub get`, `flutter analyze`, unit/widget tests.
 
-**Not claimed as verified in this scaffold:** live ESP32 connectivity, live SMTP
-delivery, or a production Firebase project — those require your credentials and
-hardware.
+**Not claimed:** live Firebase connectivity, live SMTP delivery, or ESP32
+hardware integration — those need client credentials and devices
+(`docs/CREDENTIALS.md`).
 
 ## License
 

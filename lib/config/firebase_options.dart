@@ -1,54 +1,28 @@
-// File generated for project scaffolding. Replace values by running:
-//   flutterfire configure
-//
-// Do not commit production secrets. Placeholder values allow the app to
-// compile before a Firebase project is linked.
+// Firebase options are supplied only through dart-defines (see AppConfig).
+// This file remains so older imports resolve; it does not embed client secrets.
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+import 'app_config.dart';
+
+/// Prefer [AppConfig.firebaseOptionsOrNull]. Returns null when credentials are
+/// not configured — callers must not invent placeholder keys.
 class DefaultFirebaseOptions {
+  DefaultFirebaseOptions._();
+
+  static FirebaseOptions? get currentPlatformOrNull =>
+      AppConfig.firebaseOptionsOrNull;
+
+  /// Throws if credentials are missing. Prefer [currentPlatformOrNull].
   static FirebaseOptions get currentPlatform {
-    if (kIsWeb) {
-      return web;
+    final options = currentPlatformOrNull;
+    if (options == null) {
+      throw StateError(
+        'Firebase credentials are not configured. '
+        'Provide dart-defines (see docs/CREDENTIALS.md) or run without Firebase '
+        'using the local data layer.',
+      );
     }
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return android;
-      case TargetPlatform.iOS:
-        return ios;
-      default:
-        return android;
-    }
+    return options;
   }
-
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_WEB_API_KEY',
-    appId: '1:000000000000:web:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'smart-safety-helmet',
-    authDomain: 'smart-safety-helmet.firebaseapp.com',
-    databaseURL: 'https://smart-safety-helmet-default-rtdb.firebaseio.com',
-    storageBucket: 'smart-safety-helmet.appspot.com',
-  );
-
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_ANDROID_API_KEY',
-    appId: '1:000000000000:android:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'smart-safety-helmet',
-    databaseURL: 'https://smart-safety-helmet-default-rtdb.firebaseio.com',
-    storageBucket: 'smart-safety-helmet.appspot.com',
-  );
-
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_IOS_API_KEY',
-    appId: '1:000000000000:ios:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'smart-safety-helmet',
-    databaseURL: 'https://smart-safety-helmet-default-rtdb.firebaseio.com',
-    storageBucket: 'smart-safety-helmet.appspot.com',
-    iosBundleId: 'com.academicsafety.smartSafetyHelmet',
-  );
 }

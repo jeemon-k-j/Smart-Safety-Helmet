@@ -1,168 +1,259 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../models/accident_event.dart';
 import '../../models/device_status.dart';
 import '../../repositories/accident_repository.dart';
 import '../../repositories/device_repository.dart';
-import '../../repositories/emergency_contact_repository.dart';
-import '../../services/accident/accident_alert_controller.dart';
-import '../../services/auth/auth_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/config_status_banner.dart';
 import '../../widgets/status_tile.dart';
+import '../../services/accident/accident_alert_controller.dart';
 import '../accident/accident_alert_panel.dart';
-import '../contacts/emergency_contacts_screen.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
     super.key,
-    required this.authService,
     required this.deviceRepository,
     required this.accidentRepository,
-    required this.contactRepository,
     required this.alertController,
+    required this.firebaseReady,
   });
 
-  final AuthService authService;
   final DeviceRepository deviceRepository;
   final AccidentRepository accidentRepository;
-  final EmergencyContactRepository contactRepository;
   final AccidentAlertController alertController;
-
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  StreamSubscription<AccidentEvent>? _accidentSub;
-
-  @override
-  void initState() {
-    super.initState();
-    _accidentSub = widget.accidentRepository.watchAccident().listen((event) {
-      unawaited(widget.alertController.onAccidentUpdate(event));
-    });
-  }
-
-  @override
-  void dispose() {
-    unawaited(_accidentSub?.cancel());
-    super.dispose();
-  }
+  final bool firebaseReady;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Smart Safety Helmet'),
-        actions: [
-          IconButton(
-            tooltip: 'Emergency contacts',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => EmergencyContactsScreen(
-                    repository: widget.contactRepository,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.contacts_outlined),
+    return StreamBuilder<DeviceStatus>(
+      stream: deviceRepository.watchStatus(),
+      builder: (context, snapshot) {
+        final status = snapshot.data ?? DeviceStatus.empty;
+        final overall = _overallTone(status);
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppMetrics.page,
+            AppMetrics.page,
+            AppMetrics.page,
+            AppMetrics.page + 24,
           ),
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: widget.authService.signOut,
-            icon: const Icon(Icons.logout),
+          children: [
+            _HeroHeader(
+              deviceId: deviceRepository.deviceId,
+              tone: overall,
+              summary: _overallSummary(status),
+            ),
+            const SizedBox(height: 14),
+            ConfigStatusBanner(firebaseReady: firebaseReady),
+            const SizedBox(height: 14),
+            AccidentAlertPanel(controller: alertController),
+            const SizedBox(height: 18),
+            Text(
+              'Live safety status',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brand,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            StatusTile(
+              title: 'Helmet',
+              value: status.helmetClipped ? 'Clipped / worn' : 'Not clipped',
+              icon: Icons.sports_motorsports,
+              tone: status.helmetClipped ? SafetyTone.safe : SafetyTone.danger,
+              subtitle: status.helmetClipped
+                  ? 'Ignition may proceed if alcohol is clear'
+                  : 'Ignition blocked until helmet is clipped',
+            ),
+            const SizedBox(height: AppMetrics.gap),
+            StatusTile(
+              title: 'Alcohol',
+              value: status.alcoholDetected ? 'Detected' : 'Clear',
+              icon: Icons.local_bar_outlined,
+              tone:
+                  status.alcoholDetected ? SafetyTone.danger : SafetyTone.safe,
+              subtitle: status.alcoholDetected
+                  ? 'Ignition blocked by alcohol sensor'
+                  : 'No alcohol detected',
+            ),
+            const SizedBox(height: AppMetrics.gap),
+            StatusTile(
+              title: 'Ignition',
+              value: status.ignitionActive
+                  ? 'Active'
+                  : (status.ignitionAllowed ? 'Allowed (idle)' : 'Blocked'),
+              icon: Icons.key_rounded,
+              tone: status.ignitionAllowed
+                  ? SafetyTone.safe
+                  : SafetyTone.danger,
+              subtitle:
+                  'Controlled on ESP32 from helmet + alcohol (offline-safe)',
+            ),
+            const SizedBox(height: AppMetrics.gap),
+            StatusTile(
+              title: 'Drowsiness',
+              value: status.drowsy ? 'Drowsy — warning active' : 'Alert',
+              icon: Icons.bedtime_outlined,
+              tone: status.drowsy ? SafetyTone.warning : SafetyTone.safe,
+              subtitle: status.warningActive
+                  ? 'LED / buzzer warning active on helmet'
+                  : 'No local warning',
+            ),
+            const SizedBox(height: AppMetrics.gap),
+            StreamBuilder<AccidentEvent>(
+              stream: accidentRepository.watchAccident(),
+              builder: (context, accidentSnap) {
+                final accident = accidentSnap.data;
+                final active = accident?.active == true;
+                final cancelled = accident?.cancelled == true;
+                final tone = active
+                    ? SafetyTone.danger
+                    : (cancelled ? SafetyTone.warning : SafetyTone.safe);
+                return StatusTile(
+                  title: 'Accident',
+                  value: active
+                      ? 'Active (${accident!.severity.name})'
+                      : (cancelled ? 'Cancelled' : 'None'),
+                  icon: Icons.car_crash_outlined,
+                  tone: tone,
+                  subtitle: accident?.eventId.isNotEmpty == true
+                      ? 'Event: ${accident!.eventId}'
+                      : 'Waiting for ESP32 accident updates',
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  SafetyTone _overallTone(DeviceStatus status) {
+    if (!status.helmetClipped || status.alcoholDetected) {
+      return SafetyTone.danger;
+    }
+    if (status.drowsy || status.warningActive) {
+      return SafetyTone.warning;
+    }
+    if (status.ignitionAllowed) {
+      return SafetyTone.safe;
+    }
+    return SafetyTone.unknown;
+  }
+
+  String _overallSummary(DeviceStatus status) {
+    if (!status.helmetClipped) {
+      return 'Helmet not clipped — ignition held off';
+    }
+    if (status.alcoholDetected) {
+      return 'Alcohol detected — ignition held off';
+    }
+    if (status.drowsy) {
+      return 'Drowsiness warning active on helmet';
+    }
+    if (status.ignitionAllowed) {
+      return 'Safety checks clear for this device';
+    }
+    return 'Awaiting current helmet sensor readings';
+  }
+}
+
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({
+    required this.deviceId,
+    required this.tone,
+    required this.summary,
+  });
+
+  final String deviceId;
+  final SafetyTone tone;
+  final String summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppTheme.toneColor(tone);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.brand, Color(0xFF124A6B)],
+        ),
+        borderRadius: BorderRadius.circular(AppMetrics.radius),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brand.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      body: StreamBuilder<DeviceStatus>(
-        stream: widget.deviceRepository.watchStatus(),
-        builder: (context, snapshot) {
-          final status = snapshot.data ?? DeviceStatus.empty;
-          return ListView(
-            padding: const EdgeInsets.all(AppMetrics.page),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                'Live device status',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.brand,
-                    ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  deviceId,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Device: ${widget.deviceRepository.deviceId}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              AccidentAlertPanel(controller: widget.alertController),
-              const SizedBox(height: 12),
-              StatusTile(
-                title: 'Helmet',
-                value: status.helmetClipped ? 'Clipped / worn' : 'Not clipped',
-                icon: Icons.sports_motorsports,
-                ok: status.helmetClipped,
-                subtitle: status.helmetClipped
-                    ? 'Ignition may proceed if alcohol is clear'
-                    : 'Ignition blocked until helmet is clipped',
-              ),
-              const SizedBox(height: AppMetrics.gap),
-              StatusTile(
-                title: 'Alcohol',
-                value: status.alcoholDetected ? 'Detected' : 'Clear',
-                icon: Icons.local_bar_outlined,
-                ok: !status.alcoholDetected,
-                subtitle: status.alcoholDetected
-                    ? 'Ignition blocked by alcohol sensor'
-                    : 'No alcohol detected',
-              ),
-              const SizedBox(height: AppMetrics.gap),
-              StatusTile(
-                title: 'Ignition',
-                value: status.ignitionActive
-                    ? 'Active'
-                    : (status.ignitionAllowed ? 'Allowed (idle)' : 'Blocked'),
-                icon: Icons.key,
-                ok: status.ignitionAllowed,
-                subtitle:
-                    'Controlled on ESP32 from helmet + alcohol (offline-safe)',
-              ),
-              const SizedBox(height: AppMetrics.gap),
-              StatusTile(
-                title: 'Drowsiness',
-                value: status.drowsy ? 'Drowsy — warning active' : 'Alert',
-                icon: Icons.bedtime_outlined,
-                ok: !status.drowsy,
-                subtitle: status.warningActive
-                    ? 'LED / buzzer warning active on helmet'
-                    : 'No local warning',
-              ),
-              const SizedBox(height: AppMetrics.gap),
-              StreamBuilder<AccidentEvent>(
-                stream: widget.accidentRepository.watchAccident(),
-                builder: (context, accidentSnap) {
-                  final accident = accidentSnap.data;
-                  final active = accident?.active == true;
-                  return StatusTile(
-                    title: 'Accident',
-                    value: active
-                        ? 'Active (${accident!.severity.name})'
-                        : (accident?.cancelled == true
-                            ? 'Cancelled'
-                            : 'None'),
-                    icon: Icons.car_crash_outlined,
-                    ok: !active,
-                    subtitle: accident?.eventId.isNotEmpty == true
-                        ? 'Event: ${accident!.eventId}'
-                        : 'Waiting for ESP32 accident updates',
-                  );
-                },
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  switch (tone) {
+                    SafetyTone.safe => 'Safe',
+                    SafetyTone.warning => 'Warning',
+                    SafetyTone.danger => 'Danger',
+                    SafetyTone.unknown => 'Unknown',
+                  },
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
               ),
             ],
-          );
-        },
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Safety overview',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  height: 1.4,
+                ),
+          ),
+        ],
       ),
     );
   }
