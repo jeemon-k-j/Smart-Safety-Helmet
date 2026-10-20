@@ -1,0 +1,16 @@
+{
+  "name": "smart-safety-helmet-local-email-bridge",
+  "description": "Local SMTP bridge adapted from DeepCrash for Smart Safety Helmet emergency emails.",
+  "main": "server.js",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.0"
+  }
+}
