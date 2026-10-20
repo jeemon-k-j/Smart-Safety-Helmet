@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// Compact notice when Firebase credentials are not configured.
+/// Compact notice when cloud services are unavailable.
 class ConfigStatusBanner extends StatelessWidget {
   const ConfigStatusBanner({super.key, required this.firebaseReady});
 
@@ -28,8 +28,8 @@ class ConfigStatusBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Cloud services pending. Using on-device data until Firebase '
-              'credentials are provided.',
+              'Cloud services are unavailable. Account and alert settings are '
+              'stored on this device until a cloud connection is established.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     height: 1.35,
                     color: AppColors.brand,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 
 import '../../models/geo_position.dart';
@@ -7,6 +8,9 @@ import 'location_service.dart';
 const Duration deviceLocationTimeout = Duration(seconds: 12);
 
 /// Device GPS via geolocator (adapted from DeepCrash).
+///
+/// Requests a high-accuracy / precise fix when permitted. Does not use Maps or
+/// Places APIs.
 class GeolocatorLocationService extends LocationService {
   GeolocatorLocationService({this.timeout = deviceLocationTimeout});
 
@@ -36,14 +40,12 @@ class GeolocatorLocationService extends LocationService {
     Duration timeout = deviceLocationTimeout,
   }) async {
     final position = await geo.Geolocator.getCurrentPosition(
-      locationSettings: geo.LocationSettings(
-        accuracy: geo.LocationAccuracy.high,
-        timeLimit: timeout,
-      ),
+      locationSettings: _locationSettings(timeout),
     );
     return GeoPosition(
       latitude: position.latitude,
       longitude: position.longitude,
+      accuracyMeters: position.accuracy,
     );
   }
 
@@ -57,8 +59,32 @@ class GeolocatorLocationService extends LocationService {
       position: GeoPosition(
         latitude: position.latitude,
         longitude: position.longitude,
+        accuracyMeters: position.accuracy,
       ),
       capturedAt: position.timestamp,
+    );
+  }
+
+  geo.LocationSettings _locationSettings(Duration timeout) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return geo.AndroidSettings(
+        accuracy: geo.LocationAccuracy.high,
+        timeLimit: timeout,
+        // Prefer precise location when the user grants fine permission.
+        forceLocationManager: false,
+      );
+    }
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      return geo.AppleSettings(
+        accuracy: geo.LocationAccuracy.best,
+        timeLimit: timeout,
+      );
+    }
+    return geo.LocationSettings(
+      accuracy: geo.LocationAccuracy.high,
+      timeLimit: timeout,
     );
   }
 

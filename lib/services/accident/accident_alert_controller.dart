@@ -199,7 +199,7 @@ class AccidentAlertController extends ChangeNotifier {
     final contacts = await _contactRepository.listContacts();
     final recipients = contacts
         .map((c) => c.email.trim())
-        .where((e) => e.contains('@'))
+        .where(_looksLikeEmail)
         .toSet()
         .toList();
 
@@ -236,9 +236,14 @@ class AccidentAlertController extends ChangeNotifier {
         debugPrint('Could not update RTDB after email: $error');
       }
       phase = AccidentAlertPhase.sent;
+      final locationNote = fix == null
+          ? ' Phone location was unavailable.'
+          : '';
       statusMessage = recipients.isEmpty
-          ? 'Notification dispatched (bridge may use TEST_EMAIL).'
-          : 'Emergency email sent to ${recipients.length} contact(s).';
+          ? 'Notification processed, but no alert recipients are configured.'
+              '$locationNote'
+          : 'Emergency email sent to ${recipients.length} recipient(s).'
+              '$locationNote';
       notifyListeners();
     } catch (error) {
       debugPrint('Emergency notification failed: $error');
@@ -247,9 +252,7 @@ class AccidentAlertController extends ChangeNotifier {
       }
       phase = AccidentAlertPhase.failed;
       statusMessage =
-          'Could not send emergency email. Check the email bridge and try again.';
-      // Allow a manual retry path by clearing the gate for this id is unsafe;
-      // keep the id processed so we do not spam. Persist failure as unsent.
+          'Could not send emergency email: $error';
       await _pendingStore.save(
         PendingNotificationRecord(
           eventId: event.eventId,
@@ -259,6 +262,11 @@ class AccidentAlertController extends ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  bool _looksLikeEmail(String value) {
+    final at = value.indexOf('@');
+    return at > 0 && value.contains('.', at + 1);
   }
 
   Future<void> _finishCancelled({required bool remote}) async {

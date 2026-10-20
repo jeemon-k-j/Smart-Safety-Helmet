@@ -90,8 +90,15 @@ app.*.map.json
 dart_defines.json
 **/GoogleService-Info.plist
 .env
+.env.*
+!.env.example
 local-email-bridge/.env
 local-email-bridge/node_modules/
+**/serviceAccount*.json
+**/*-firebase-adminsdk-*.json
+**/secrets/
+*.pem
+*.p12
 
 # Exceptions: keep example configs
 !dart_defines.example.json

@@ -69,7 +69,7 @@ class AlertsScreen extends StatelessWidget {
                       const SizedBox(width: 14),
                       Expanded(
                         child: Text(
-                          'No active accident alert. When ESP32 reports an '
+                          'No active accident alert. When the helmet reports an '
                           'accident, the countdown and cancel action appear here.',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(

@@ -5,11 +5,12 @@ import 'device_repository.dart';
 
 /// Holds the last known status without Firebase.
 ///
-/// Not exposed in the UI as a simulator — tests may call [publish] directly.
+/// Starts as [DeviceStatus.unavailable]. Tests / UI inspection may call
+/// [publish]; the product UI has no simulator controls.
 class LocalDeviceRepository implements DeviceRepository {
   LocalDeviceRepository({
     required this.deviceId,
-    DeviceStatus initial = DeviceStatus.empty,
+    DeviceStatus initial = DeviceStatus.unavailable,
   }) : _status = initial;
 
   @override
@@ -25,7 +26,6 @@ class LocalDeviceRepository implements DeviceRepository {
     yield* _controller.stream;
   }
 
-  /// Test / firmware-integration hook only (no UI control).
   void publish(DeviceStatus status) {
     _status = status;
     if (!_controller.isClosed) {

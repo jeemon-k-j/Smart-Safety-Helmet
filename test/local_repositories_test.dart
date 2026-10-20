@@ -16,7 +16,11 @@ void main() {
     final sub = repo.watchStatus().listen(events.add);
     await Future<void>.delayed(Duration.zero);
     repo.publish(
-      const DeviceStatus(helmetClipped: true, ignitionAllowed: true),
+      const DeviceStatus(
+        isAvailable: true,
+        helmetClipped: true,
+        ignitionAllowed: true,
+      ),
     );
     await Future<void>.delayed(Duration.zero);
     expect(events.last.helmetClipped, isTrue);

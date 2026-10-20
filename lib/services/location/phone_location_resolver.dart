@@ -5,11 +5,15 @@ import '../../models/phone_location.dart';
 import 'location_service.dart';
 
 /// Resolves smartphone GPS for an accident (adapted from DeepCrash).
+///
+/// Prefers a fresh high-accuracy fix. Uses a recent cached fix only when a
+/// fresh reading fails, and never invents coordinates.
 class PhoneLocationResolver {
   PhoneLocationResolver({
     required LocationService locationService,
     this.timeout = defaultTimeout,
     this.maxCachedAge = defaultMaxCachedAge,
+    this.maxAccuracyMeters = defaultMaxAccuracyMeters,
     DateTime Function()? clock,
   })  : _locationService = locationService,
         _clock = clock ?? DateTime.now;
@@ -17,9 +21,13 @@ class PhoneLocationResolver {
   static const Duration defaultTimeout = Duration(seconds: 12);
   static const Duration defaultMaxCachedAge = Duration(minutes: 5);
 
+  /// Reject readings looser than this horizontal accuracy (metres).
+  static const double defaultMaxAccuracyMeters = 100;
+
   final LocationService _locationService;
   final Duration timeout;
   final Duration maxCachedAge;
+  final double maxAccuracyMeters;
   final DateTime Function() _clock;
 
   Future<PhoneLocationFix> resolve() async {
@@ -36,7 +44,7 @@ class PhoneLocationResolver {
       final position = await _locationService
           .getFreshPosition(timeout: timeout)
           .timeout(timeout);
-      if (_isUsable(position)) {
+      if (_isUsable(position) && _isAccurateEnough(position)) {
         return PhoneLocationFix(
           position: position,
           quality: PhoneLocationQuality.fresh,
@@ -71,7 +79,10 @@ class PhoneLocationResolver {
 
   Future<PhoneLocationFix> _cachedOrThrow(LocationFailure failure) async {
     final cached = await _safeCached();
-    if (cached != null && _isRecent(cached) && _isUsable(cached.position)) {
+    if (cached != null &&
+        _isRecent(cached) &&
+        _isUsable(cached.position) &&
+        _isAccurateEnough(cached.position)) {
       return PhoneLocationFix(
         position: cached.position,
         quality: PhoneLocationQuality.stale,
@@ -94,6 +105,18 @@ class PhoneLocationResolver {
     return !age.isNegative && age <= maxCachedAge;
   }
 
+  bool _isAccurateEnough(GeoPosition position) {
+    final accuracy = position.accuracyMeters;
+    // If the platform omits accuracy, accept a usable coordinate pair.
+    if (accuracy == null) {
+      return true;
+    }
+    if (!accuracy.isFinite || accuracy < 0) {
+      return false;
+    }
+    return accuracy <= maxAccuracyMeters;
+  }
+
   LocationFailure _failureForPermission(LocationPermissionStatus permission) {
     return switch (permission) {
       LocationPermissionStatus.deniedForever =>
@@ -109,6 +132,7 @@ class PhoneLocationResolver {
     return error is TimeoutException || text.contains('timeout');
   }
 
+  /// Rejects non-numeric, out-of-range, and exact 0,0 values.
   static bool _isUsable(GeoPosition position) {
     final latitude = position.latitude;
     final longitude = position.longitude;

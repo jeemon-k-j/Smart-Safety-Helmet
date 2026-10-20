@@ -38,6 +38,7 @@ class UiSampleData {
     if (devices is LocalDeviceRepository) {
       devices.publish(
         DeviceStatus(
+          isAvailable: true,
           alcoholDetected: false,
           helmetClipped: true,
           ignitionAllowed: true,

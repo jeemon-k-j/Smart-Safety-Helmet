@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/emergency_contact.dart';
 import '../../repositories/emergency_contact_repository.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/email_validation.dart';
 
 /// Emergency email recipient configuration (not a separate Contacts tab).
 class EmergencyRecipientsSection extends StatefulWidget {
@@ -43,9 +44,8 @@ class _EmergencyRecipientsSectionState
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (v) => (v == null || !v.contains('@'))
-                      ? 'Valid email required'
-                      : null,
+                  validator: (v) =>
+                      isValidEmergencyEmail(v) ? null : 'Valid email required',
                 ),
               ],
             ),

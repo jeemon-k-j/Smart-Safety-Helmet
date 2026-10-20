@@ -23,7 +23,7 @@ class FirebaseDeviceRepository implements DeviceRepository {
       if (value is Map) {
         return DeviceStatus.fromMap(Map<dynamic, dynamic>.from(value));
       }
-      return DeviceStatus.empty;
+      return DeviceStatus.unavailable;
     });
   }
 }
