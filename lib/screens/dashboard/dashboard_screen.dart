@@ -6,9 +6,80 @@ import '../../repositories/accident_repository.dart';
 import '../../repositories/device_repository.dart';
 import '../../services/accident/accident_alert_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/config_status_banner.dart';
 import '../../widgets/status_tile.dart';
 import '../accident/accident_alert_panel.dart';
+
+/// Presentation model for the Home Accident [StatusTile].
+class HomeAccidentStatusPresentation {
+  const HomeAccidentStatusPresentation({
+    required this.tone,
+    required this.value,
+    required this.subtitle,
+  });
+
+  final SafetyTone tone;
+  final String value;
+  final String subtitle;
+}
+
+/// Maps RTDB accident state to Home tile copy.
+///
+/// Live warnings only for [AccidentEvent.isActionable]. Cancelled / resolved /
+/// inactive events are Clear (safe), never technical event IDs.
+HomeAccidentStatusPresentation describeHomeAccidentStatus(
+  AccidentEvent? accident,
+) {
+  final hasEvent = accident != null && accident.eventId.trim().isNotEmpty;
+  if (!hasEvent || accident == null) {
+    return const HomeAccidentStatusPresentation(
+      tone: SafetyTone.unknown,
+      value: 'Unknown',
+      subtitle: 'No accident updates received yet',
+    );
+  }
+
+  if (accident.isActionable) {
+    final detected = accident.detectedAt;
+    return HomeAccidentStatusPresentation(
+      tone: SafetyTone.danger,
+      value: 'Active (${accident.severity.name})',
+      subtitle: detected == null
+          ? 'Accident in progress. Use Alerts to cancel if needed.'
+          : 'Detected ${formatDateTimeIst(detected)}. '
+              'Use Alerts to cancel if needed.',
+    );
+  }
+
+  final detected = accident.detectedAt;
+  final when = detected == null ? null : formatDateTimeIst(detected);
+  if (accident.cancelled) {
+    return HomeAccidentStatusPresentation(
+      tone: SafetyTone.safe,
+      value: 'Clear',
+      subtitle: when == null
+          ? 'Last alert was cancelled. Details are on Alerts.'
+          : 'Last alert cancelled · $when',
+    );
+  }
+  if (accident.notificationSent) {
+    return HomeAccidentStatusPresentation(
+      tone: SafetyTone.safe,
+      value: 'Clear',
+      subtitle: when == null
+          ? 'Last alert was resolved. Details are on Alerts.'
+          : 'Last alert resolved · $when',
+    );
+  }
+  return HomeAccidentStatusPresentation(
+    tone: SafetyTone.safe,
+    value: 'Clear',
+    subtitle: when == null
+        ? 'No active accident'
+        : 'No active accident · last update $when',
+  );
+}
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
@@ -182,31 +253,14 @@ class DashboardScreen extends StatelessWidget {
                     subtitle: 'Could not load accident updates',
                   );
                 }
-                final accident = accidentSnap.data;
-                final hasEvent = accident != null &&
-                    accident.eventId.trim().isNotEmpty;
-                final active = accident?.active == true;
-                final cancelled = accident?.cancelled == true;
-                final tone = !hasEvent
-                    ? SafetyTone.unknown
-                    : (active
-                        ? SafetyTone.danger
-                        : (cancelled
-                            ? SafetyTone.warning
-                            : SafetyTone.safe));
-                final event = accident;
+                final presentation =
+                    describeHomeAccidentStatus(accidentSnap.data);
                 return StatusTile(
                   title: 'Accident',
-                  value: !hasEvent || event == null
-                      ? 'Unknown'
-                      : (active
-                          ? 'Active (${event.severity.name})'
-                          : (cancelled ? 'Cancelled' : 'None')),
+                  value: presentation.value,
                   icon: Icons.car_crash_outlined,
-                  tone: tone,
-                  subtitle: hasEvent && event != null
-                      ? 'Event: ${event.eventId}'
-                      : 'No accident updates received yet',
+                  tone: presentation.tone,
+                  subtitle: presentation.subtitle,
                 );
               },
             ),
