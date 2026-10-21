@@ -11,14 +11,14 @@ void main() {
   final note = EmergencyNotification.forAccident(
     eventId: 'acc-bridge',
     severity: AccidentSeverity.low,
-    recipients: const ['care@example.com'],
+    recipients: const <String>[],
   );
 
-  test('dispatch succeeds on 200', () async {
+  test('dispatch succeeds when bridge returns status sent', () async {
     final client = MockClient((request) async {
       expect(request.url.path, '/notify');
       expect(jsonDecode(request.body)['eventId'], 'acc-bridge');
-      return http.Response('{"status":"sent"}', 200);
+      return http.Response('{"status":"sent","count":1}', 200);
     });
 
     final service = EmailBridgeNotificationService(
@@ -28,9 +28,40 @@ void main() {
     await service.dispatch(note);
   });
 
+  test('dispatch succeeds for duplicate-skipped', () async {
+    final client = MockClient((request) async {
+      return http.Response('{"status":"duplicate-skipped"}', 200);
+    });
+    final service = EmailBridgeNotificationService(
+      bridgeBaseUrl: 'http://10.0.2.2:3000',
+      client: client,
+    );
+    await service.dispatch(note);
+  });
+
+  test('dispatch maps send-failed to EmailBridgeException', () async {
+    final client = MockClient((request) async {
+      return http.Response('{"status":"send-failed"}', 502);
+    });
+    final service = EmailBridgeNotificationService(
+      bridgeBaseUrl: 'http://10.0.2.2:3000',
+      client: client,
+    );
+    expect(
+      () => service.dispatch(note),
+      throwsA(
+        isA<EmailBridgeException>().having(
+          (e) => e.message,
+          'message',
+          contains('could not be delivered'),
+        ),
+      ),
+    );
+  });
+
   test('dispatch maps non-2xx to EmailBridgeException', () async {
     final client = MockClient((request) async {
-      return http.Response('nope', 502);
+      return http.Response('nope', 500);
     });
     final service = EmailBridgeNotificationService(
       bridgeBaseUrl: 'http://10.0.2.2:3000',

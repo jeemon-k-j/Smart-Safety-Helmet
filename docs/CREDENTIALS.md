@@ -16,7 +16,7 @@ Cloud APIs without approval.
 4. Deploying `database.rules.json` to that project
 5. ESP32 writing to the live RTDB with the project’s database secret / auth method
 
-Until then the app runs with **local** auth, contacts, and empty device/accident
+Until then the app runs with **local** auth and empty device/accident
 streams (no demo simulator controls in the UI).
 
 ## Blocked until SMTP / email bridge credentials arrive

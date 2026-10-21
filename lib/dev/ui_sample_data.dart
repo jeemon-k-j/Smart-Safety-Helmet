@@ -3,7 +3,6 @@ import '../models/accident_severity.dart';
 import '../models/device_status.dart';
 import '../repositories/local_accident_repository.dart';
 import '../repositories/local_device_repository.dart';
-import '../repositories/local_emergency_contact_repository.dart';
 import '../services/notifications/recording_emergency_notification_service.dart';
 import '../app_dependencies.dart';
 
@@ -60,17 +59,6 @@ class UiSampleData {
           detectedAt: DateTime.now(),
         ),
       );
-    }
-
-    final contacts = deps.contactRepository;
-    if (contacts is LocalEmergencyContactRepository) {
-      final existing = await contacts.listContacts();
-      if (existing.isEmpty) {
-        await contacts.addContact(
-          name: 'Emergency Contact',
-          email: 'contact@example.com',
-        );
-      }
     }
   }
 

@@ -3,13 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/app_config.dart';
 import 'repositories/accident_repository.dart';
 import 'repositories/device_repository.dart';
-import 'repositories/emergency_contact_repository.dart';
 import 'repositories/firebase_accident_repository.dart';
 import 'repositories/firebase_device_repository.dart';
-import 'repositories/firebase_emergency_contact_repository.dart';
 import 'repositories/local_accident_repository.dart';
 import 'repositories/local_device_repository.dart';
-import 'repositories/local_emergency_contact_repository.dart';
 import 'services/accident/accident_alert_controller.dart';
 import 'services/accident/accident_event_gate.dart';
 import 'services/accident/pending_notification_store.dart';
@@ -29,7 +26,6 @@ class AppDependencies {
     required this.authService,
     required this.deviceRepository,
     required this.accidentRepository,
-    required this.contactRepository,
     required this.alertController,
     required this.locationService,
     required this.notifications,
@@ -39,7 +35,6 @@ class AppDependencies {
   final AuthService authService;
   final DeviceRepository deviceRepository;
   final AccidentRepository accidentRepository;
-  final EmergencyContactRepository contactRepository;
   final AccidentAlertController alertController;
   final LocationService locationService;
   final EmergencyNotificationService notifications;
@@ -55,31 +50,27 @@ class AppDependencies {
     final AuthService auth;
     final DeviceRepository devices;
     final AccidentRepository accidents;
-    final EmergencyContactRepository contacts;
 
     if (firebaseReady) {
       auth = FirebaseAuthService();
       devices = FirebaseDeviceRepository(deviceId: deviceId);
       accidents = FirebaseAccidentRepository(deviceId: deviceId);
-      contacts = FirebaseEmergencyContactRepository();
     } else {
       auth = LocalAuthService(preferences: preferences);
       devices = LocalDeviceRepository(deviceId: deviceId);
       accidents = LocalAccidentRepository(deviceId: deviceId);
-      contacts = LocalEmergencyContactRepository(preferences: preferences);
     }
 
     final LocationService location =
         locationService ?? GeolocatorLocationService();
 
     // DeepCrash-style bridge client is always the production path. SMTP secrets
-    // remain on the bridge host; delivery is unverified until credentials exist.
+    // and the fixed emergency recipient remain on the bridge host.
     final EmergencyNotificationService mail = notifications ??
         EmailBridgeNotificationService(bridgeBaseUrl: AppConfig.emailBridgeUrl);
 
     final alertController = AccidentAlertController(
       accidentRepository: accidents,
-      contactRepository: contacts,
       locationResolver: PhoneLocationResolver(locationService: location),
       notifications: mail,
       gate: AccidentEventGate(),
@@ -91,7 +82,6 @@ class AppDependencies {
       authService: auth,
       deviceRepository: devices,
       accidentRepository: accidents,
-      contactRepository: contacts,
       alertController: alertController,
       locationService: location,
       notifications: mail,
@@ -117,10 +107,6 @@ class AppDependencies {
     final accidents = accidentRepository;
     if (accidents is LocalAccidentRepository) {
       accidents.dispose();
-    }
-    final contacts = contactRepository;
-    if (contacts is LocalEmergencyContactRepository) {
-      contacts.dispose();
     }
   }
 }

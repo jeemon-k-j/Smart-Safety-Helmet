@@ -20,7 +20,7 @@ class AccidentAlertPanel extends StatelessWidget {
 
         final tone = switch (controller.phase) {
           AccidentAlertPhase.cancelled => SafetyTone.safe,
-          AccidentAlertPhase.sent => SafetyTone.warning,
+          AccidentAlertPhase.sent => SafetyTone.safe,
           AccidentAlertPhase.failed => SafetyTone.warning,
           _ => SafetyTone.danger,
         };
@@ -103,7 +103,8 @@ class AccidentAlertPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Emergency emails are sent when the countdown reaches zero.',
+                  'If this countdown reaches zero, one accident emergency '
+                  'email is sent. Other safety warnings do not send email.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.unknown,
                       ),

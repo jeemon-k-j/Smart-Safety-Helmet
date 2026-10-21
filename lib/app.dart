@@ -49,7 +49,6 @@ class _SmartSafetyHelmetAppState extends State<SmartSafetyHelmetApp> {
             authService: deps.authService,
             deviceRepository: deps.deviceRepository,
             accidentRepository: deps.accidentRepository,
-            contactRepository: deps.contactRepository,
             alertController: deps.alertController,
             firebaseReady: deps.firebaseReady,
           );

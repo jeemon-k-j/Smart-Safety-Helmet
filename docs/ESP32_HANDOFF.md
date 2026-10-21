@@ -149,7 +149,7 @@ Severity drives the phone countdown before email: **high â‰ˆ 10 s**, **medium â‰
 ## What Flutter owns (not ESP32)
 
 - Phone GPS for the accident location and Google Maps link  
-- Emergency email recipients and the local SMTP email bridge  
+- Local SMTP email bridge with a fixed server-side emergency recipient  
 - False-alert cancel UI and countdown  
 - Filling `latitude`, `longitude`, `mapsUrl`, `locationSource`, and `notificationSent`
 

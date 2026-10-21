@@ -12,7 +12,7 @@ Authentication, and smartphone GPS + emergency email (adapted from DeepCrash /
 - **Accident detection** — ESP32 raises RTDB accident events; app countdown + cancel; phone GPS; emergency email with Google Maps link
 - **Drowsiness detection** — status + local LED/buzzer warning on hardware
 - **Dashboard** — helmet, alcohol, ignition, accident, drowsiness
-- **Emergency contacts** — email addresses managed per authenticated user
+- **Accident emergency email** — fixed recipient on the Gmail SMTP bridge (accident countdown only)
 - **False-alert cancellation** — severity-based countdown (low 30s / medium 20s / high 10s); duplicate emails prevented per `eventId`
 - **Crash-resistant hardware notes** — see `docs/HARDWARE.md`
 
@@ -20,10 +20,10 @@ Authentication, and smartphone GPS + emergency email (adapted from DeepCrash /
 
 ```
 lib/
-  models/           Device, accident, contacts, notification, GPS types
+  models/           Device, accident, notification, GPS types
   repositories/     Abstract + Firebase RTDB + local (credential-free) adapters
   services/         Auth, location (DeepCrash-style), accident countdown, email bridge client
-  screens/          Login, Safety dashboard, Alerts (countdown + email recipients)
+  screens/          Login, Safety dashboard, Alerts (countdown + notification status)
   bootstrap.dart    Initializes Firebase only when dart-defines are present
   app_dependencies.dart  Wires Firebase or local implementations
 firmware/           ESP32 field contract reference sketch
@@ -32,7 +32,7 @@ docs/               RTDB schema, hardware, CREDENTIALS
 ```
 
 Bottom navigation has two requirement-derived destinations only: **Safety** and
-**Alerts**. Emergency email recipients live on Alerts (not a separate Contacts tab).
+**Alerts**. Emergency email uses the bridge’s fixed recipient (no in-app Add Mail).
 
 Ignition allow/deny and LED/buzzer warnings are **ESP32-local** and must not
 depend on internet connectivity.
@@ -42,8 +42,8 @@ coordinates or a `maps.google.com` link).
 
 ## Run without client credentials
 
-The app starts with local auth/contacts/status repositories when Firebase
-dart-defines are absent. There are **no** demo/simulator controls in the UI.
+The app starts with local auth/status repositories when Firebase dart-defines
+are absent. There are **no** demo/simulator controls in the UI.
 
 ```bash
 flutter pub get

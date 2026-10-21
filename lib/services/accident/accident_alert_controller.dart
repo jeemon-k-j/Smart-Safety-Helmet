@@ -8,9 +8,9 @@ import '../../models/emergency_notification.dart';
 import '../../models/geo_position.dart';
 import '../../models/phone_location.dart';
 import '../../repositories/accident_repository.dart';
-import '../../repositories/emergency_contact_repository.dart';
 import '../../utils/formatters.dart';
 import '../location/phone_location_resolver.dart';
+import '../notifications/email_bridge_notification_service.dart';
 import '../notifications/emergency_notification_service.dart';
 import 'accident_event_gate.dart';
 import 'pending_notification_store.dart';
@@ -25,20 +25,20 @@ enum AccidentAlertPhase {
   failed,
 }
 
-/// False-alert countdown, phone GPS, and emergency email dispatch.
+/// False-alert countdown, phone GPS, and accident-only emergency email dispatch.
 ///
+/// Email is sent only after an active accident countdown expires without
+/// cancellation. Helmet, alcohol, drowsiness, and ignition status never email.
 /// Severity selects countdown length. The same [eventId] is never emailed twice.
 class AccidentAlertController extends ChangeNotifier {
   AccidentAlertController({
     required AccidentRepository accidentRepository,
-    required EmergencyContactRepository contactRepository,
     required PhoneLocationResolver locationResolver,
     required EmergencyNotificationService notifications,
     required AccidentEventGate gate,
     required PendingNotificationStore pendingStore,
     DateTime Function()? clock,
   })  : _accidentRepository = accidentRepository,
-        _contactRepository = contactRepository,
         _locationResolver = locationResolver,
         _notifications = notifications,
         _gate = gate,
@@ -46,7 +46,6 @@ class AccidentAlertController extends ChangeNotifier {
         _clock = clock ?? DateTime.now;
 
   final AccidentRepository _accidentRepository;
-  final EmergencyContactRepository _contactRepository;
   final PhoneLocationResolver _locationResolver;
   final EmergencyNotificationService _notifications;
   final AccidentEventGate _gate;
@@ -196,17 +195,12 @@ class AccidentAlertController extends ChangeNotifier {
     statusMessage = locationMessage ?? 'Sending emergency email…';
     notifyListeners();
 
-    final contacts = await _contactRepository.listContacts();
-    final recipients = contacts
-        .map((c) => c.email.trim())
-        .where(_looksLikeEmail)
-        .toSet()
-        .toList();
-
+    // Recipient is configured on the SMTP bridge only. Do not require
+    // app-side contact lists for delivery or success messaging.
     final notification = EmergencyNotification.forAccident(
       eventId: event.eventId,
       severity: event.severity,
-      recipients: recipients,
+      recipients: const <String>[],
       position: fix?.position,
       occurredAt: event.detectedAt ?? _clock(),
       locationSource: fix?.locationSource,
@@ -239,11 +233,7 @@ class AccidentAlertController extends ChangeNotifier {
       final locationNote = fix == null
           ? ' Phone location was unavailable.'
           : '';
-      statusMessage = recipients.isEmpty
-          ? 'Notification processed, but no alert recipients are configured.'
-              '$locationNote'
-          : 'Emergency email sent to ${recipients.length} recipient(s).'
-              '$locationNote';
+      statusMessage = 'Emergency email sent.$locationNote';
       notifyListeners();
     } catch (error) {
       debugPrint('Emergency notification failed: $error');
@@ -251,8 +241,9 @@ class AccidentAlertController extends ChangeNotifier {
         return;
       }
       phase = AccidentAlertPhase.failed;
-      statusMessage =
-          'Could not send emergency email: $error';
+      statusMessage = error is EmailBridgeException
+          ? error.message
+          : 'Could not send emergency email. Try again later.';
       await _pendingStore.save(
         PendingNotificationRecord(
           eventId: event.eventId,
@@ -262,11 +253,6 @@ class AccidentAlertController extends ChangeNotifier {
       );
       notifyListeners();
     }
-  }
-
-  bool _looksLikeEmail(String value) {
-    final at = value.indexOf('@');
-    return at > 0 && value.contains('.', at + 1);
   }
 
   Future<void> _finishCancelled({required bool remote}) async {

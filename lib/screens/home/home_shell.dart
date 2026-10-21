@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../models/accident_event.dart';
 import '../../repositories/accident_repository.dart';
 import '../../repositories/device_repository.dart';
-import '../../repositories/emergency_contact_repository.dart';
 import '../../services/accident/accident_alert_controller.dart';
 import '../../services/auth/auth_service.dart';
 import '../alerts/alerts_screen.dart';
@@ -18,7 +17,6 @@ class HomeShell extends StatefulWidget {
     required this.authService,
     required this.deviceRepository,
     required this.accidentRepository,
-    required this.contactRepository,
     required this.alertController,
     required this.firebaseReady,
   });
@@ -26,7 +24,6 @@ class HomeShell extends StatefulWidget {
   final AuthService authService;
   final DeviceRepository deviceRepository;
   final AccidentRepository accidentRepository;
-  final EmergencyContactRepository contactRepository;
   final AccidentAlertController alertController;
   final bool firebaseReady;
 
@@ -77,7 +74,6 @@ class _HomeShellState extends State<HomeShell> {
           ),
           AlertsScreen(
             alertController: widget.alertController,
-            contactRepository: widget.contactRepository,
           ),
         ],
       ),
