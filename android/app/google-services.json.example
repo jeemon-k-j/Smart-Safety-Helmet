@@ -1,22 +1,21 @@
 {
   "project_info": {
-    "project_number": "CLIENT_PROJECT_NUMBER",
-    "project_id": "CLIENT_PROJECT_ID",
-    "storage_bucket": "CLIENT_PROJECT_ID.appspot.com",
-    "firebase_url": "https://CLIENT_PROJECT_ID-default-rtdb.firebaseio.com"
+    "project_number": "586230371735",
+    "project_id": "smart-safety-helmet-93f6d",
+    "storage_bucket": "smart-safety-helmet-93f6d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:CLIENT:android:CLIENT",
+        "mobilesdk_app_id": "1:586230371735:android:51b70958c6c61d23eba0d2",
         "android_client_info": {
-          "package_name": "com.academicsafety.smart_safety_helmet"
+          "package_name": "com.cynosylix.smart_safety_helmet"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "CLIENT_ANDROID_API_KEY"
+          "current_key": "REPLACE_WITH_ANDROID_API_KEY"
         }
       ],
       "services": {

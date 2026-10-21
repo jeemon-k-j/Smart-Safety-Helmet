@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
+import '../config/app_firebase.dart';
 import '../models/emergency_contact.dart';
 import 'emergency_contact_repository.dart';
 
@@ -9,7 +10,7 @@ class FirebaseEmergencyContactRepository implements EmergencyContactRepository {
     FirebaseAuth? auth,
     FirebaseDatabase? database,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _database = database ?? FirebaseDatabase.instance;
+        _database = database ?? AppFirebase.database;
 
   final FirebaseAuth _auth;
   final FirebaseDatabase _database;

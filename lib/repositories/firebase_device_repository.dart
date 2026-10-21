@@ -1,5 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 
+import '../config/app_firebase.dart';
 import '../models/device_status.dart';
 import 'device_repository.dart';
 
@@ -7,7 +8,7 @@ class FirebaseDeviceRepository implements DeviceRepository {
   FirebaseDeviceRepository({
     required this.deviceId,
     FirebaseDatabase? database,
-  }) : _database = database ?? FirebaseDatabase.instance;
+  }) : _database = database ?? AppFirebase.database;
 
   @override
   final String deviceId;

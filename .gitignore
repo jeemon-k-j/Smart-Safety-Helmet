@@ -100,6 +100,9 @@ local-email-bridge/node_modules/
 *.pem
 *.p12
 
+# Generated / local emulator capture dumps
+screenshots/e2e/
+
 # Exceptions: keep example configs
 !dart_defines.example.json
 !local-email-bridge/.env.example

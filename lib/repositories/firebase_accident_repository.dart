@@ -1,5 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 
+import '../config/app_firebase.dart';
 import '../models/accident_event.dart';
 import '../models/accident_severity.dart';
 import 'accident_repository.dart';
@@ -8,7 +9,7 @@ class FirebaseAccidentRepository implements AccidentRepository {
   FirebaseAccidentRepository({
     required this.deviceId,
     FirebaseDatabase? database,
-  }) : _database = database ?? FirebaseDatabase.instance;
+  }) : _database = database ?? AppFirebase.database;
 
   @override
   final String deviceId;

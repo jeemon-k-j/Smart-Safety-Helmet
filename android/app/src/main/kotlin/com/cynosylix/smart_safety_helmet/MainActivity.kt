@@ -1,4 +1,4 @@
-package com.academicsafety.smart_safety_helmet
+﻿package com.cynosylix.smart_safety_helmet
 
 import io.flutter.embedding.android.FlutterActivity
 

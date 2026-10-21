@@ -11,4 +11,12 @@ void main() {
     expect(AppConfig.defaultDeviceId, isNotEmpty);
     expect(AppConfig.emailBridgeUrl, contains('http'));
   });
+
+  test('defaults target the active Firebase RTDB project', () {
+    expect(AppConfig.firebaseProjectId, 'smart-safety-helmet-93f6d');
+    expect(
+      AppConfig.realtimeDatabaseUrl,
+      'https://smart-safety-helmet-93f6d-default-rtdb.firebaseio.com/',
+    );
+  });
 }

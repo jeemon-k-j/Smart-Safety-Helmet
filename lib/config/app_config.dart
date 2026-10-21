@@ -22,32 +22,50 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:3000',
   );
 
-  // --- Firebase (all empty until the client provides values) ---
+  /// Active Firebase / RTDB project identifiers.
+  static const String firebaseProjectIdDefault = 'smart-safety-helmet-93f6d';
+  static const String realtimeDatabaseUrlDefault =
+      'https://smart-safety-helmet-93f6d-default-rtdb.firebaseio.com/';
+
+  // --- Firebase (inject via dart-defines; see dart_defines.example.json) ---
 
   static const String firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const String firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
   static const String firebaseMessagingSenderId =
       String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
-  static const String firebaseProjectId =
-      String.fromEnvironment('FIREBASE_PROJECT_ID');
-  static const String firebaseDatabaseUrl =
-      String.fromEnvironment('FIREBASE_DATABASE_URL');
+  static const String firebaseProjectId = String.fromEnvironment(
+    'FIREBASE_PROJECT_ID',
+    defaultValue: firebaseProjectIdDefault,
+  );
+  static const String firebaseDatabaseUrl = String.fromEnvironment(
+    'FIREBASE_DATABASE_URL',
+    defaultValue: realtimeDatabaseUrlDefault,
+  );
   static const String firebaseStorageBucket =
       String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
   static const String firebaseAuthDomain =
       String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
   static const String firebaseIosBundleId = String.fromEnvironment(
     'FIREBASE_IOS_BUNDLE_ID',
-    defaultValue: 'com.academicsafety.smartSafetyHelmet',
+    defaultValue: 'com.cynosylix.smartSafetyHelmet',
   );
 
-  /// True only when the minimum Firebase dart-defines are present.
+  /// Normalized RTDB URL used by repositories and connectivity checks.
+  static String get realtimeDatabaseUrl {
+    final raw = firebaseDatabaseUrl.trim();
+    if (raw.isEmpty) {
+      return realtimeDatabaseUrlDefault;
+    }
+    return raw.endsWith('/') ? raw : '$raw/';
+  }
+
+  /// True only when the minimum Firebase client credentials are present.
   static bool get hasFirebaseConfig =>
       firebaseApiKey.isNotEmpty &&
       firebaseAppId.isNotEmpty &&
       firebaseMessagingSenderId.isNotEmpty &&
       firebaseProjectId.isNotEmpty &&
-      firebaseDatabaseUrl.isNotEmpty;
+      realtimeDatabaseUrl.isNotEmpty;
 
   static FirebaseOptions? get firebaseOptionsOrNull {
     if (!hasFirebaseConfig) {
@@ -58,12 +76,10 @@ class AppConfig {
       appId: firebaseAppId,
       messagingSenderId: firebaseMessagingSenderId,
       projectId: firebaseProjectId,
-      databaseURL: firebaseDatabaseUrl,
+      databaseURL: realtimeDatabaseUrl,
       storageBucket:
           firebaseStorageBucket.isEmpty ? null : firebaseStorageBucket,
-      authDomain: firebaseAuthDomain.isEmpty
-          ? null
-          : firebaseAuthDomain,
+      authDomain: firebaseAuthDomain.isEmpty ? null : firebaseAuthDomain,
       iosBundleId: _iosBundleIdIfNeeded,
     );
   }

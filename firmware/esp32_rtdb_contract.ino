@@ -1,7 +1,13 @@
 /*
  * Smart Safety Helmet — ESP32 RTDB field contract (reference sketch).
  *
- * This file documents the expected Firebase Realtime Database payloads.
+ * Active RTDB:
+ *   Project: smart-safety-helmet-93f6d
+ *   URL:     https://smart-safety-helmet-93f6d-default-rtdb.firebaseio.com/
+ *   Status:  devices/helmet-001/status
+ *   Accident: devices/helmet-001/accident
+ *
+ * See docs/RTDB_SCHEMA.md for the full field contract.
  * Replace Wi-Fi / Firebase credentials at flash time. Ignition and warning
  * outputs are driven locally and do not wait for the network.
  *
