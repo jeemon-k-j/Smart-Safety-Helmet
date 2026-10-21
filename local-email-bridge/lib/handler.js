@@ -72,11 +72,11 @@ function createHandler({ configuredRecipient, sendEmail, store, logger = console
       return;
     }
 
-    const { subject, text } = buildEmail(note);
+    const { subject, text, html } = buildEmail(note);
 
     try {
       for (const to of resolved.recipients) {
-        await sendEmail({ to, subject, text });
+        await sendEmail({ to, subject, text, html });
       }
       if (key) {
         store.add(key);
