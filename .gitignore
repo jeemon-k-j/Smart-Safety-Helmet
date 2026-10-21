@@ -87,6 +87,7 @@ app.*.map.json
 **/linux/flutter/generated_plugins.cmake
 
 # Firebase / secrets (placeholder google-services.json may be committed for scaffolding)
+/android/app/google-services.json
 dart_defines.json
 **/GoogleService-Info.plist
 .env
