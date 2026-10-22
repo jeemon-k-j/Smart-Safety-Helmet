@@ -103,6 +103,7 @@ local-email-bridge/node_modules/
 
 # Generated / local emulator capture dumps
 screenshots/e2e/
+graphify-out/
 
 # Exceptions: keep example configs
 !dart_defines.example.json

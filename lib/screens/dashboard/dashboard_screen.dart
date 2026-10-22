@@ -31,8 +31,7 @@ class HomeAccidentStatusPresentation {
 HomeAccidentStatusPresentation describeHomeAccidentStatus(
   AccidentEvent? accident,
 ) {
-  final hasEvent = accident != null && accident.eventId.trim().isNotEmpty;
-  if (!hasEvent || accident == null) {
+  if (accident == null || accident.eventId.trim().isEmpty) {
     return const HomeAccidentStatusPresentation(
       tone: SafetyTone.unknown,
       value: 'Unknown',
