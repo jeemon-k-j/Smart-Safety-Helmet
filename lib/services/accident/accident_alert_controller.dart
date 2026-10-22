@@ -66,17 +66,20 @@ class AccidentAlertController extends ChangeNotifier {
   bool get canCancel =>
       phase == AccidentAlertPhase.countdown && activeEvent != null;
 
+  bool _isInFlight(String eventId) {
+    return activeEvent?.eventId == eventId &&
+        (phase == AccidentAlertPhase.countdown ||
+            phase == AccidentAlertPhase.locating ||
+            phase == AccidentAlertPhase.notifying);
+  }
+
   /// Called whenever RTDB accident data changes.
   Future<void> onAccidentUpdate(AccidentEvent event) async {
+    // Hardware clear (`active: false`) or app/remote cancel must abort before
+    // email, even when the cancelled flag arrives late or is omitted.
     if (!event.active) {
-      if (phase == AccidentAlertPhase.countdown ||
-          phase == AccidentAlertPhase.locating ||
-          phase == AccidentAlertPhase.notifying) {
-        // Device cleared while we were working — stop local countdown only if
-        // the same event was cancelled remotely.
-        if (event.cancelled && activeEvent?.eventId == event.eventId) {
-          await _finishCancelled(remote: true);
-        }
+      if (_isInFlight(event.eventId)) {
+        await _finishCancelled(remote: true);
       }
       return;
     }
@@ -84,11 +87,19 @@ class AccidentAlertController extends ChangeNotifier {
     final existing = await _pendingStore.read(event.eventId);
     if (existing != null &&
         (existing.notificationSent || existing.cancelled)) {
-      _gate.markProcessed(event.eventId);
+      if (_isInFlight(event.eventId)) {
+        await _finishCancelled(remote: true);
+      } else {
+        _gate.markProcessed(event.eventId);
+      }
       return;
     }
     if (event.notificationSent || event.cancelled) {
-      _gate.markProcessed(event.eventId);
+      if (_isInFlight(event.eventId)) {
+        await _finishCancelled(remote: true);
+      } else {
+        _gate.markProcessed(event.eventId);
+      }
       return;
     }
     if (!_gate.accept(event)) {
@@ -191,6 +202,11 @@ class AccidentAlertController extends ChangeNotifier {
           'A fresh GPS fix was unavailable; a recent phone location is being used.';
     }
 
+    // Late cancel / hardware clear during GPS — do not email.
+    if (generation != _generation) {
+      return;
+    }
+
     phase = AccidentAlertPhase.notifying;
     statusMessage = locationMessage ?? 'Sending emergency email…';
     notifyListeners();
@@ -205,6 +221,10 @@ class AccidentAlertController extends ChangeNotifier {
       occurredAt: event.detectedAt ?? _clock(),
       locationSource: fix?.locationSource,
     );
+
+    if (generation != _generation) {
+      return;
+    }
 
     try {
       await _notifications.dispatch(notification);
@@ -259,10 +279,21 @@ class AccidentAlertController extends ChangeNotifier {
     _generation++;
     _ticker?.cancel();
     _ticker = null;
+    final event = activeEvent;
+    if (event != null) {
+      _gate.markProcessed(event.eventId);
+      await _pendingStore.save(
+        PendingNotificationRecord(
+          eventId: event.eventId,
+          notificationSent: false,
+          cancelled: true,
+        ),
+      );
+    }
     phase = AccidentAlertPhase.cancelled;
     remaining = Duration.zero;
     statusMessage = remote
-        ? 'Accident cancelled remotely.'
+        ? 'Accident cleared. Emergency email was not sent.'
         : 'Alert cancelled. Emergency email was not sent.';
     notifyListeners();
   }

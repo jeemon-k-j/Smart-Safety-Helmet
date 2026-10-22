@@ -60,6 +60,96 @@ void main() {
     accidents.dispose();
   });
 
+  test('hardware clear active:false aborts countdown without email', () async {
+    final accidents = LocalAccidentRepository(deviceId: 'h1');
+    final recorder = RecordingEmergencyNotificationService();
+    final controller = AccidentAlertController(
+      accidentRepository: accidents,
+      locationResolver: PhoneLocationResolver(
+        locationService: const FixedLocationService(
+          position: GeoPosition(latitude: 9.93, longitude: 76.26),
+        ),
+      ),
+      notifications: recorder,
+      gate: AccidentEventGate(),
+      pendingStore: MemoryPendingNotificationStore(),
+    );
+
+    await controller.onAccidentUpdate(
+      const AccidentEvent(
+        eventId: 'acc-hw-clear',
+        active: true,
+        severity: AccidentSeverity.high,
+      ),
+    );
+    expect(controller.phase, AccidentAlertPhase.countdown);
+
+    // Physical clear may omit cancelled; Flutter must still not email.
+    await controller.onAccidentUpdate(
+      const AccidentEvent(
+        eventId: 'acc-hw-clear',
+        active: false,
+        severity: AccidentSeverity.high,
+        cancelled: false,
+      ),
+    );
+    expect(controller.phase, AccidentAlertPhase.cancelled);
+    expect(recorder.dispatched, isEmpty);
+    expect(
+      controller.statusMessage,
+      'Accident cleared. Emergency email was not sent.',
+    );
+
+    controller.dispose();
+    accidents.dispose();
+  });
+
+  test('delayed cancel during locating prevents email dispatch', () async {
+    final accidents = LocalAccidentRepository(deviceId: 'h1');
+    final recorder = RecordingEmergencyNotificationService();
+    var now = DateTime.utc(2026, 10, 21, 12);
+    final controller = AccidentAlertController(
+      accidentRepository: accidents,
+      locationResolver: PhoneLocationResolver(
+        locationService: const FixedLocationService(
+          position: GeoPosition(latitude: 9.93, longitude: 76.26),
+        ),
+      ),
+      notifications: recorder,
+      gate: AccidentEventGate(),
+      pendingStore: MemoryPendingNotificationStore(),
+      clock: () => now,
+    );
+
+    await controller.onAccidentUpdate(
+      AccidentEvent(
+        eventId: 'acc-late-cancel',
+        active: true,
+        severity: AccidentSeverity.high,
+        detectedAt: now,
+      ),
+    );
+    expect(controller.phase, AccidentAlertPhase.countdown);
+
+    now = now.add(const Duration(seconds: 11));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await controller.onAccidentUpdate(
+      const AccidentEvent(
+        eventId: 'acc-late-cancel',
+        active: false,
+        severity: AccidentSeverity.high,
+        cancelled: true,
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+
+    expect(controller.phase, AccidentAlertPhase.cancelled);
+    expect(recorder.dispatched, isEmpty);
+
+    controller.dispose();
+    accidents.dispose();
+  });
+
   test('successful bridge dispatch shows email sent without recipient warning',
       () async {
     final accidents = LocalAccidentRepository(deviceId: 'h1');

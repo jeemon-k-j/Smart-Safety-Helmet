@@ -221,7 +221,11 @@ class DashboardScreen extends StatelessWidget {
                       : SafetyTone.danger),
               subtitle: !status.isAvailable
                   ? 'Ignition status is unavailable'
-                  : 'Controlled by helmet and alcohol sensors on the device',
+                  : (status.ignitionActive
+                      ? 'Device reports engine running'
+                      : (status.ignitionAllowed
+                          ? 'Allowed by helmet sensors; engine-run not confirmed'
+                          : 'Held off by helmet sensors (not relay telemetry)')),
             ),
             const SizedBox(height: AppMetrics.gap),
             StatusTile(
