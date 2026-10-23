@@ -1,8 +1,5 @@
 /*
- * Smart Safety Helmet — ESP32 RTDB field contract (reference sketch ONLY).
- *
- * This file is the field-contract reference only.
- * Production ESP32 #1 sketch: firmware/esp32_helmet_sender.ino
+ * Smart Safety Helmet — ESP32 RTDB field contract (reference sketch).
  *
  * Active RTDB:
  *   Project: smart-safety-helmet-93f6d
@@ -10,20 +7,7 @@
  *   Status:  devices/helmet-001/status
  *   Accident: devices/helmet-001/accident
  *
- * Accident lifecycle (single owner for countdown / email):
- *   - ESP32 raises accident once with a NEW eventId + severity + active:true
- *   - Flutter runs the only false-alert countdown (high 10s / medium 20s / low 30s)
- *   - ESP32 must NOT run a parallel countdown or send email
- *   - Physical cancel: cancelled:true + active:false (same eventId)
- *   - Do not timer-clear active:false; leave active until cancel or notificationSent
- *   - App cancel: Flutter sets cancelled:true and active:false
- *
- * ignitionAllowed = local permission (clip + alcohol). ignitionActive = engine
- * actually running — do NOT set ignitionActive just because the relay is ON.
- *
- * ESP-NOW / ESP32 #2: not present in this repository — leave unverified.
- *
- * See docs/RTDB_SCHEMA.md and docs/ESP32_HANDOFF.md.
+ * See docs/RTDB_SCHEMA.md for the full field contract.
  * Replace Wi-Fi / Firebase credentials at flash time. Ignition and warning
  * outputs are driven locally and do not wait for the network.
  *

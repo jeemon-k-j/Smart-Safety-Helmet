@@ -38,7 +38,7 @@ Do **not** write phone GPS or emergency-email fields. Do **not** use Cloud Fires
 | Accident detection + severity | ESP32 | Raise `accident` with new `eventId` |
 | Smartphone GPS | **Flutter** | Not ESP32 |
 | Emergency email / Maps link | **Flutter + email bridge** | Not ESP32 |
-| False-alert cancel countdown | **Flutter** | ESP32 must not run an email countdown or timer-clear `active: false`. Physical cancel: `cancelled: true` + `active: false`. Leave `active: true` until Flutter sets `notificationSent` or cancel |
+| False-alert cancel countdown | **Flutter** | ESP32 may set `active: false` if hardware clears |
 
 Ignition cut-off and LED/buzzer **must work without internet**. Do not wait for RTDB
 or the phone before acting locally.
